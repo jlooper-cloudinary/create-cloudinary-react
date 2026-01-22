@@ -1,4 +1,4 @@
-# create-cloudinary-react-vite
+# create-cloudinary-react
 
 > **Beta Release** - This is a beta version. We welcome feedback and bug reports!
 
@@ -9,7 +9,7 @@ Scaffold a Cloudinary React + Vite + TypeScript project with interactive setup.
 ## Usage
 
 ```bash
-npx create-cloudinary-react-vite
+npx create-cloudinary-react
 ```
 
 The CLI will prompt you for:

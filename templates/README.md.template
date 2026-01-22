@@ -1,6 +1,6 @@
 # {{PROJECT_NAME}}
 
-A Cloudinary React + Vite + TypeScript project scaffolded with [create-cloudinary-react-vite](https://github.com/your-org/create-cloudinary-react-vite).
+A Cloudinary React + Vite + TypeScript project scaffolded with [create-cloudinary-react](https://github.com/cloudinary-devs/create-cloudinary-react).
 
 ## Quick Start
 

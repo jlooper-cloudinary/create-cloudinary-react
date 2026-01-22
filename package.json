@@ -1,10 +1,10 @@
 {
-  "name": "create-cloudinary-react-vite",
+  "name": "create-cloudinary-react",
   "version": "1.0.0",
   "description": "Scaffold a Cloudinary React + Vite + TypeScript project with interactive setup",
   "type": "module",
   "bin": {
-    "create-cloudinary-react-vite": "./cli.js"
+    "create-cloudinary-react": "./cli.js"
   },
   "keywords": [
     "cloudinary",
@@ -18,11 +18,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cloudinary-devs/create-cloudinary-react-vite.git"
+    "url": "https://github.com/cloudinary-devs/create-cloudinary-react.git"
   },
-  "homepage": "https://github.com/cloudinary-devs/create-cloudinary-react-vite#readme",
+  "homepage": "https://github.com/cloudinary-devs/create-cloudinary-react#readme",
   "bugs": {
-    "url": "https://github.com/cloudinary-devs/create-cloudinary-react-vite/issues"
+    "url": "https://github.com/cloudinary-devs/create-cloudinary-react/issues"
   },
   "dependencies": {
     "inquirer": "^9.2.15",
@@ -33,9 +33,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "prepare": "husky install",
-    "release": "release-please manifest --repo-url=github.com/cloudinary-devs/create-cloudinary-react-vite",
-    "release:pr": "release-please release-pr --repo-url=github.com/cloudinary-devs/create-cloudinary-react-vite"
+    "release": "release-please manifest --repo-url=github.com/cloudinary-devs/create-cloudinary-react",
+    "release:pr": "release-please release-pr --repo-url=github.com/cloudinary-devs/create-cloudinary-react"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.0",
