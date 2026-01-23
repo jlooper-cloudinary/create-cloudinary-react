@@ -25,6 +25,7 @@ function isValidProjectName(name) {
 
 async function main() {
   console.log(chalk.cyan.bold('\n🚀 Cloudinary React + Vite Boilerplate\n'));
+  console.log(chalk.gray('💡 Need a Cloudinary account? Sign up for free: https://cloudinary.com/users/register/free\n'));
 
   const answers = await inquirer.prompt([
     {
@@ -49,9 +50,16 @@ async function main() {
       type: 'input',
       name: 'cloudName',
       message: 'Cloudinary Cloud Name:',
+      description: chalk.gray(
+        'Your cloud name is shown in your dashboard: https://console.cloudinary.com'
+      ),
       validate: (input) => {
         if (!input.trim()) {
-          return 'Cloud name is required';
+          return chalk.yellow(
+            'Cloud name is required.\n' +
+            '  → Sign up: https://cloudinary.com/users/register/free\n' +
+            '  → Find your cloud name: https://console.cloudinary.com'
+          );
         }
         if (!isValidCloudName(input)) {
           return 'Cloud name can only contain lowercase letters, numbers, hyphens, and underscores';
