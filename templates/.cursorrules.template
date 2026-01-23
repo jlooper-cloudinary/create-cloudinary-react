@@ -20,6 +20,14 @@
 - ✅ CORRECT: `import.meta.env.VITE_CLOUDINARY_CLOUD_NAME` (not `process.env`)
 - Always restart dev server after adding/updating `.env` variables
 
+## Upload Presets
+- **Unsigned upload presets are required for client-side uploads** - Transformations work without them, but uploads need an unsigned preset
+- ✅ Create unsigned upload preset: https://console.cloudinary.com/app/settings/upload/presets
+- ✅ Set preset in `.env`: `VITE_CLOUDINARY_UPLOAD_PRESET=your-preset-name`
+- ✅ Use in code: `import { uploadPreset } from './cloudinary/config'`
+- ⚠️ If upload preset is missing, the Upload Widget will show an error message
+- ⚠️ Upload presets must be set to "Unsigned" mode for client-side usage (no API key/secret needed)
+
 ## Import Patterns
 - ✅ Import Cloudinary instance: `import { cld } from './cloudinary/config'`
 - ✅ Import components: `import { AdvancedImage, AdvancedVideo } from '@cloudinary/react'`

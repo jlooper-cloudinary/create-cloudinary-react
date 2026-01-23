@@ -11,7 +11,7 @@ Scaffold a Cloudinary React + Vite + TypeScript project with interactive setup.
 - Node.js 18+ installed
 - A Cloudinary account (free tier available)
   - [Sign up for free](https://cloudinary.com/users/register/free)
-  - Your cloud name is in your [dashboard](https://console.cloudinary.com)
+  - Your cloud name is in your [dashboard](https://console.cloudinary.com/app/home/dashboard)
 
 ## Usage
 
@@ -21,8 +21,8 @@ npx create-cloudinary-react
 
 The CLI will prompt you for:
 - Project name
-- **Cloudinary cloud name** (found in your [dashboard](https://console.cloudinary.com))
-- Upload preset (optional)
+- **Cloudinary cloud name** (found in your [dashboard](https://console.cloudinary.com/app/home/dashboard))
+- Upload preset (optional - required for uploads, but transformations work without it)
 - AI coding assistant(s) you're using (Cursor, GitHub Copilot, Claude, etc.)
 - Whether to install dependencies
 - Whether to start dev server

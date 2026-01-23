@@ -51,14 +51,14 @@ async function main() {
       name: 'cloudName',
       message: 'Cloudinary Cloud Name:',
       description: chalk.gray(
-        'Your cloud name is shown in your dashboard: https://console.cloudinary.com'
+        'Your cloud name is shown in your dashboard: https://console.cloudinary.com/app/home/dashboard'
       ),
       validate: (input) => {
         if (!input.trim()) {
           return chalk.yellow(
             'Cloud name is required.\n' +
             '  → Sign up: https://cloudinary.com/users/register/free\n' +
-            '  → Find your cloud name: https://console.cloudinary.com'
+            '  → Find your cloud name: https://console.cloudinary.com/app/home/dashboard'
           );
         }
         if (!isValidCloudName(input)) {
@@ -70,8 +70,12 @@ async function main() {
     {
       type: 'confirm',
       name: 'hasUploadPreset',
-      message: 'Do you have an unsigned upload preset?',
+      message: 'Do you have an unsigned upload preset? (Required for uploads, optional for transformations)',
       default: false,
+      description: chalk.gray(
+        'Upload presets enable client-side uploads. You can set one up later at:\n' +
+        'https://console.cloudinary.com/app/settings/upload/presets'
+      ),
     },
     {
       type: 'input',
@@ -232,8 +236,11 @@ async function main() {
   console.log(chalk.green('✅ Project created successfully!\n'));
 
   if (!answers.hasUploadPreset) {
-    console.log(chalk.yellow('📝 To create an upload preset:'));
-    console.log(chalk.cyan('   1. Go to https://cloudinary.com/console/settings/upload/presets'));
+    console.log(chalk.yellow('\n📝 Note: Upload preset not configured'));
+    console.log(chalk.gray('   • Transformations will work with sample images'));
+    console.log(chalk.gray('   • Uploads require an unsigned upload preset'));
+    console.log(chalk.cyan('\n   To enable uploads:'));
+    console.log(chalk.cyan('   1. Go to https://console.cloudinary.com/app/settings/upload/presets'));
     console.log(chalk.cyan('   2. Click "Add upload preset"'));
     console.log(chalk.cyan('   3. Set it to "Unsigned" mode'));
     console.log(chalk.cyan('   4. Add the preset name to your .env file\n'));
