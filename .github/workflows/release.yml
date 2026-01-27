@@ -85,6 +85,19 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Add semantic-release note to v1.0.0-beta.1 if missing
+        run: |
+          # Existing v1.0.0-beta.1 tag has no git note, so semantic-release ignores it and tries to re-release it.
+          # Add the note so it is treated as last release and the next version is 1.0.0-beta.2.
+          if git rev-parse --verify v1.0.0-beta.1 >/dev/null 2>&1; then
+            if ! git notes --ref semantic-release-v1.0.0-beta.1 show v1.0.0-beta.1 >/dev/null 2>&1; then
+              git notes --ref semantic-release-v1.0.0-beta.1 add -f -m '{"channels":["beta"]}' v1.0.0-beta.1
+              if [ "${{ github.event.inputs.dry_run }}" != "true" ]; then
+                git push origin refs/notes/semantic-release-v1.0.0-beta.1
+              fi
+            fi
+          fi
+
       - name: Create initial tag if needed
         if: github.event.inputs.dry_run != 'true'
         run: |
