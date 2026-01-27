@@ -171,8 +171,8 @@ jobs:
             echo "Publishing to npm..."
             
             # Publish using npm publish which supports OIDC/trusted publishing
-            # --tag beta required for prerelease versions (1.0.0-beta.x)
-            npm publish --provenance --access public --tag beta
+            # --tag latest so installers get the most recent version (npm i create-cloudinary-react / npx create-cloudinary-react)
+            npm publish --provenance --access public --tag latest
             echo "✓ Published $VERSION_AFTER to npm"
           else
             echo "No version change detected (version: $VERSION_AFTER)"
