@@ -141,17 +141,18 @@ jobs:
       # npm publish uses OIDC (id-token: write + --provenance). No NPM_TOKEN needed.
       # Require on npmjs.com: Package → Package settings → Trusted publishers →
       #   Add: GitHub Actions, org cloudinary-devs, repo create-cloudinary-react, workflow release.yml
-      # Unset token env vars so npm uses OIDC only; stale NPM_TOKEN/NODE_AUTH_TOKEN causes "Access token expired".
+      # Force OIDC-only: override NPM_CONFIG_USERCONFIG so npm ignores setup-node's .npmrc (which may reference a stale token).
       - name: Publish to npm using trusted publishing
         if: github.event.inputs.dry_run != 'true'
         env:
           NODE_AUTH_TOKEN: ''
           NPM_TOKEN: ''
+          NPM_CONFIG_USERCONFIG: '${{ runner.temp }}/.npmrc-oidc'
         run: |
           echo "=== Publishing to npm with trusted publishing (OIDC) ==="
           unset NODE_AUTH_TOKEN NPM_TOKEN 2>/dev/null || true
-          # Use minimal .npmrc so npm uses OIDC, not a stale token from setup-node
-          echo "registry=https://registry.npmjs.org/" > ~/.npmrc
+          # Config that has only registry — no _authToken — so npm uses OIDC
+          echo "registry=https://registry.npmjs.org/" > "$NPM_CONFIG_USERCONFIG"
           
           # Get versions
           VERSION_BEFORE="${{ steps.version-before.outputs.version }}"
