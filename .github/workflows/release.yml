@@ -97,24 +97,26 @@ jobs:
           echo "=== Git tags ==="
           git tag
 
-      - name: Debug npm auth
+      - name: Configure npm authentication for semantic-release
         run: |
-          echo "=== NPM Config ==="
-          cat ~/.npmrc 2>/dev/null || echo "No ~/.npmrc found"
-          echo ""
-          echo "=== NPM Token from env ==="
-          echo "NODE_AUTH_TOKEN is set: $([ -n "$NODE_AUTH_TOKEN" ] && echo 'yes' || echo 'no')"
-          echo ""
-          echo "=== NPM whoami ==="
-          npm whoami --registry=https://registry.npmjs.org || echo "npm whoami failed"
-          echo ""
-          echo "=== Setting NPM_TOKEN from NODE_AUTH_TOKEN for semantic-release ==="
+          # actions/setup-node creates .npmrc in a temp location
+          # We need to copy it or create one that semantic-release can use
+          if [ -f "$NPM_CONFIG_USERCONFIG" ]; then
+            echo "Found npmrc at $NPM_CONFIG_USERCONFIG"
+            cat "$NPM_CONFIG_USERCONFIG"
+            # Copy to home directory for semantic-release
+            cp "$NPM_CONFIG_USERCONFIG" ~/.npmrc || true
+          fi
+          
+          # Also set NPM_TOKEN from NODE_AUTH_TOKEN if available
           if [ -n "$NODE_AUTH_TOKEN" ]; then
             echo "NPM_TOKEN=$NODE_AUTH_TOKEN" >> $GITHUB_ENV
             echo "NPM_TOKEN set from NODE_AUTH_TOKEN"
-          else
-            echo "Warning: NODE_AUTH_TOKEN not found"
           fi
+          
+          # Test npm auth
+          echo "=== Testing npm authentication ==="
+          npm whoami --registry=https://registry.npmjs.org || echo "npm whoami failed (this is OK if using OIDC)"
 
       - name: Release
         env:
