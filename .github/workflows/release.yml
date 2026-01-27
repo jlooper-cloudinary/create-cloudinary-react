@@ -2,6 +2,12 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run only (no git push, no tags, no npm publish)'
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -47,6 +53,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Setup git branch
         run: |
@@ -86,6 +93,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Create initial tag if needed
+        if: github.event.inputs.dry_run != 'true'
         run: |
           if ! git rev-parse --verify "v1.0.0-beta.1" >/dev/null 2>&1; then
             echo "Creating initial tag v1.0.0-beta.1"
@@ -94,6 +102,16 @@ jobs:
           else
             echo "Tag v1.0.0-beta.1 already exists"
           fi
+
+      - name: Dry run mode notice
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "=============================================="
+          echo "  DRY RUN MODE - No commits, tags, or publish"
+          echo "=============================================="
+          echo "Semantic-release will show what WOULD happen."
+          echo "To perform a real release, run again and uncheck 'Dry run only'."
+          echo ""
 
       - name: Debug semantic-release config
         run: |
@@ -119,10 +137,18 @@ jobs:
       - name: Release with semantic-release
         id: release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "Running semantic-release in DRY RUN mode..."
+            npx semantic-release --dry-run
+          else
+            echo "Running semantic-release (REAL release)..."
+            npx semantic-release
+          fi
 
       - name: Publish to npm using trusted publishing
+        if: github.event.inputs.dry_run != 'true'
         run: |
           echo "=== Publishing to npm with trusted publishing (OIDC) ==="
           
@@ -151,3 +177,12 @@ jobs:
             echo "No version change detected (version: $VERSION_AFTER)"
             echo "Skipping npm publish - no new release was created"
           fi
+
+      - name: Dry run - skip npm publish
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          echo "=============================================="
+          echo "  DRY RUN - Skipping npm publish"
+          echo "=============================================="
+          echo "Version that WOULD have been published: $(node -p "require('./package.json').version")"
+          echo "To publish for real, run the workflow again with 'Dry run only' unchecked."

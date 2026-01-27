@@ -59,6 +59,8 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) f
 
 Releases are triggered manually via GitHub Actions workflow. The workflow uses npm trusted publishing (OIDC) for secure package publishing.
 
+**Dry run (default):** When you run the workflow, "Dry run only" is checked by default. This runs semantic-release in dry-run mode—**no git push, no tags, no npm publish**. Use this to verify the next version and release notes before doing a real release. To publish for real, run the workflow again and **uncheck** "Dry run only".
+
 ### Commit Format
 
 ```
