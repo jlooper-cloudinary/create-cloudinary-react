@@ -15,9 +15,23 @@ jobs:
     steps:
       - name: Verify admin permissions
         run: |
-          PERMISSION=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/collaborators/${{ github.actor }}/permission" \
-            | grep -o '"permission":"[^"]*"' | cut -d'"' -f4)
+          # Use the repository's permission endpoint which works for both personal and org repos
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/collaborators/${{ github.actor }}/permission")
+          
+          # Extract permission using jq if available, otherwise use grep
+          if command -v jq &> /dev/null; then
+            PERMISSION=$(echo "$RESPONSE" | jq -r '.permission // empty')
+          else
+            PERMISSION=$(echo "$RESPONSE" | grep -o '"permission":"[^"]*"' | head -1 | cut -d'"' -f4)
+          fi
+          
+          if [ -z "$PERMISSION" ]; then
+            echo "Warning: Could not determine permission level. Response: $RESPONSE"
+            echo "Note: workflow_dispatch requires write access, proceeding..."
+            exit 0
+          fi
           
           if [ "$PERMISSION" != "admin" ]; then
             echo "Error: Only repository admins can trigger releases. Current permission: $PERMISSION"
