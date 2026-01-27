@@ -1,3 +1,10 @@
+# [1.0.0-beta.7](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.6...v1.0.0-beta.7) (2026-01-27)
+
+
+### Bug Fixes
+
+* use --tag beta when publishing prerelease to npm ([9bb888c](https://github.com/cloudinary-devs/create-cloudinary-react/commit/9bb888c0f522e30ed49e5fe8e814c80417ed7a0f))
+
 # [1.0.0-beta.6](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2026-01-27)
 
 
