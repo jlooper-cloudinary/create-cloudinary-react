@@ -61,6 +61,15 @@ jobs:
           git checkout -B main
           git branch --set-upstream-to=origin/main main
 
+      - name: Ensure master branch exists (for semantic-release validation)
+        run: |
+          # semantic-release requires at least one release branch that exists; repo uses main, we declare "master"
+          if ! git ls-remote --heads origin master 2>/dev/null | grep -q .; then
+            git checkout -b master
+            git push origin master
+            git checkout main
+          fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
