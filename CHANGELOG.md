@@ -1,3 +1,10 @@
+# [1.0.0-beta.5](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2026-01-27)
+
+
+### Bug Fixes
+
+* override NPM_CONFIG_USERCONFIG in publish step for OIDC-only ([ced5cc3](https://github.com/cloudinary-devs/create-cloudinary-react/commit/ced5cc32255004846e15bfc77becd5f110e9684c))
+
 # [1.0.0-beta.4](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2026-01-27)
 
 
