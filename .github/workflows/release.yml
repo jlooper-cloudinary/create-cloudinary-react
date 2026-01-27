@@ -42,7 +42,14 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
+
+      - name: Debug branch info
+        run: |
+          echo "Current branch: $(git branch --show-current)"
+          echo "All branches: $(git branch -a)"
+          echo "Git remote: $(git remote -v)"
 
       - uses: actions/setup-node@v4
         with:
