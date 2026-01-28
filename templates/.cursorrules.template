@@ -1,5 +1,7 @@
 # Cloudinary React SDK Patterns & Common Errors
 
+**Scope**: These rules apply to **React (web)** with Vite and the browser Upload Widget. For **React Native** uploads (including signed upload), see: https://cloudinary.com/documentation/react_native_image_and_video_upload#signed_upload — same “never expose secret, generate signature on backend” principle, but React Native uses the `upload()` method and backend SDKs differently.
+
 ## Official Documentation
 - **Transformation Rules**: https://cloudinary.com/documentation/cloudinary_transformation_rules.md
 - **Transformation Reference**: https://cloudinary.com/documentation/transformation_reference
@@ -7,6 +9,10 @@
 - **React Video Transformations**: https://cloudinary.com/documentation/react_video_transformations
 - **Cloudinary Video Player** (standalone player): https://cloudinary.com/documentation/cloudinary_video_player
 - **Video Player React Tutorial**: https://cloudinary.com/documentation/video_player_react_tutorial#banner
+- **Upload Widget (signed uploads)**: https://cloudinary.com/documentation/upload_widget#signed_uploads
+- **Upload assets in Next.js (backend signature)**: https://cloudinary.com/documentation/upload_assets_in_nextjs_tutorial
+- **Cloudinary Node.js SDK (server-side signing)** — use **v2**: `import { v2 as cloudinary } from 'cloudinary'`; do not use v1 (e.g. 1.47.0). https://cloudinary.com/documentation/node_integration
+- **React Native image and video upload (signed)**: https://cloudinary.com/documentation/react_native_image_and_video_upload#signed_upload
 - Always consult the official transformation rules when creating transformations
 - Use only officially supported parameters from the transformation reference
 
@@ -21,12 +27,17 @@
 - Always restart dev server after adding/updating `.env` variables
 
 ## Upload Presets
-- **Unsigned upload presets are required for client-side uploads** - Transformations work without them, but uploads need an unsigned preset
-- ✅ Create unsigned upload preset: https://console.cloudinary.com/app/settings/upload/presets
+- **Unsigned** = client-only uploads (no backend). **Signed** = backend required, more secure. See **"Signed vs unsigned uploads"** below for when to use which.
+- ✅ Create unsigned upload preset (for simple client uploads): https://console.cloudinary.com/app/settings/upload/presets
 - ✅ Set preset in `.env`: `VITE_CLOUDINARY_UPLOAD_PRESET=your-preset-name`
 - ✅ Use in code: `import { uploadPreset } from './cloudinary/config'`
 - ⚠️ If upload preset is missing, the Upload Widget will show an error message
 - ⚠️ Upload presets must be set to "Unsigned" mode for client-side usage (no API key/secret needed)
+- **When unsigned upload fails**: First check that the user configured their upload preset:
+  1. Is `VITE_CLOUDINARY_UPLOAD_PRESET` set in `.env`? (must match preset name exactly)
+  2. Does the preset exist in the dashboard under Settings → Upload → Upload presets?
+  3. Is the preset set to **Unsigned** (not Signed)?
+  4. Was the dev server restarted after adding/updating `.env`?
 
 ## Import Patterns
 - ✅ Import Cloudinary instance: `import { cld } from './cloudinary/config'`
@@ -131,6 +142,98 @@
   />
   ```
 - ✅ Upload result contains: `public_id`, `secure_url`, `width`, `height`, etc.
+
+## Signed vs unsigned uploads (when to use which)
+
+**Unsigned uploads** (simpler, no backend required):
+- Use when: Quick prototypes, low-risk apps, or when anyone with the preset name may upload.
+- Preset: Create an **Unsigned** upload preset in Cloudinary dashboard (Settings → Upload → Upload presets). Put preset name in `.env` as `VITE_CLOUDINARY_UPLOAD_PRESET`.
+- Client: Widget needs only `cloudName` and `uploadPreset`. No API key or secret; no backend.
+- Trade-off: Anyone who knows the preset name can upload. Use only when that is acceptable.
+
+**Signed uploads** (more secure, backend required):
+- Use when: Production apps, authenticated users, or when you need to control who can upload.
+- Preset: Create a **Signed** upload preset in the dashboard. The backend generates a signature using your API secret; the client never sees the secret.
+- Client: Widget gets `api_key` (from your backend), `uploadPreset`, and an `uploadSignature` **function** that calls your backend for each upload. API secret stays on server only.
+- Trade-off: Requires a backend (Node/Express, Next.js API route, etc.) to sign requests. More secure; signature validates each upload.
+
+**Rule of thumb**: If the user asks for "secure" or "signed" uploads, or needs to restrict uploads, use **signed** with a backend. For simple demos or when preset exposure is acceptable, **unsigned** is fine.
+
+## Secure (Signed) Uploads
+
+**Golden rules**: (1) **Never expose or commit the API secret** — it must live only in server env and server code. (2) **Never commit the API key or secret** — use `server/.env` (or equivalent) and ensure it is in `.gitignore`. (3) The **api_key** is not secret and may be sent to the client (e.g. in the signature response); only **api_secret** must stay server-only.
+
+**When the user asks for secure uploads**: Use a signed upload preset and generate the signature on the server. The client may receive `uploadSignature`, `uploadSignatureTimestamp`, `api_key`, and `cloudName` from your backend; it must **never** receive or contain the API secret.
+
+### Where to put API key and secret (server-only, never committed)
+
+- **Do not put them in the root `.env`** used by Vite. Keep root `.env` for `VITE_CLOUDINARY_CLOUD_NAME` and `VITE_CLOUDINARY_UPLOAD_PRESET` only.
+- **Create `server/.env`** (in a `server/` folder) and put there: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`. No `VITE_` prefix. Load this file only in the server process (e.g. `dotenv.config({ path: 'server/.env' })`).
+- **Never commit API key or secret**: Add `server/.env` to `.gitignore`. Use env vars for all credentials; never hardcode or commit them.
+- **In code**: Read `process.env.CLOUDINARY_API_SECRET` and `process.env.CLOUDINARY_API_KEY` only in server/API code. Never in React components or any file Vite bundles.
+- **Next.js**: `CLOUDINARY_*` in root `.env.local` is server-only (browser only sees `NEXT_PUBLIC_*`). For Vite + Node in same repo, prefer `server/.env` and load it only in the server.
+- **Server SDK**: Use the **Cloudinary Node.js SDK v2** for server-side signing: `import { v2 as cloudinary } from 'cloudinary'` (package name: `cloudinary`). Do **not** use v1 (e.g. 1.47.0) — v1 does not expose `cloudinary.utils.api_sign_request` the same way. Install: `npm install cloudinary` (v2).
+
+### How the client gets credentials (working pattern — use this)
+
+Use **`uploadSignature` as a function** (not `signatureEndpoint`). The widget calls the function with `params_to_sign`; your function calls your backend and passes the signature back. This pattern is reliable across widget versions.
+
+1. **Fetch `api_key` from server first** (before creating the widget). API key is not secret; safe to use in client. Your backend returns it from the sign endpoint (e.g. `/api/sign-image`).
+
+2. **Set `uploadSignature` to a function** that receives `(callback, params_to_sign)` from the widget. Inside the function, add `upload_preset` to `params_to_sign` (use your signed preset name, e.g. from env or a constant), POST to your backend with `{ params_to_sign: paramsWithPreset }`, then call `callback(data.signature)` with the response.
+
+3. **Include `uploadPreset` in the widget config** (your signed preset name). The widget needs it so it includes it in `params_to_sign`. **Default:** Cloudinary accounts have a built-in signed preset `ml_default` (users can delete it). If the user has not created their own signed preset, use `ml_default`; otherwise use the preset name from their dashboard.
+
+4. **Server endpoint**: Accept `params_to_sign` from the request body. Always include `upload_preset` in the object you sign (add it if the client did not send it). Use `cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET)` to generate the signature. Return `{ signature, timestamp, api_key, cloud_name }`. Never return the API secret.
+
+**Preset name:** Use `ml_default` when the user has not specified a signed preset (Cloudinary provides it by default; users can delete it — then they must create one in the dashboard). Otherwise use the user's preset name.
+
+**Generic client pattern** (preset: use `ml_default` if it exists / user hasn't specified one; endpoint is up to the user):
+```tsx
+// Fetch api_key from server first, then:
+widgetConfig.api_key = data.api_key; // from your sign endpoint
+widgetConfig.uploadPreset = 'ml_default'; // default signed preset (or user's preset if they created one)
+widgetConfig.uploadSignature = function(callback, params_to_sign) {
+  const paramsWithPreset = { ...params_to_sign, upload_preset: 'ml_default' };
+  fetch('/api/sign-image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ params_to_sign: paramsWithPreset }),
+  })
+    .then(r => r.json())
+    .then(data => data.signature ? callback(data.signature) : callback(''))
+    .catch(() => callback(''));
+};
+```
+
+**Generic server pattern** (Node/Express with SDK v2):
+```ts
+// import { v2 as cloudinary } from 'cloudinary';
+const params = req.body.params_to_sign || {};
+const paramsToSign = { ...params, upload_preset: params.upload_preset || 'ml_default' };
+const signature = cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET);
+res.json({ signature, timestamp: paramsToSign.timestamp, api_key: process.env.CLOUDINARY_API_KEY, cloud_name: process.env.CLOUDINARY_CLOUD_NAME });
+```
+
+- ❌ **Avoid `signatureEndpoint`** — it may not be called reliably by all widget versions. Prefer the `uploadSignature` function.
+- ✅ Docs: [Upload widget — signed uploads](https://cloudinary.com/documentation/upload_widget#signed_uploads), [Upload assets in Next.js](https://cloudinary.com/documentation/upload_assets_in_nextjs_tutorial).
+
+### Rules for secure uploads
+- ✅ Use a **signed** upload preset (dashboard → Upload presets → Signed). Do not use an unsigned preset when the user wants secure uploads. **Default:** Accounts have a built-in signed preset `ml_default` — use it if the user hasn't created their own (they can delete `ml_default`, in which case they must create a signed preset in the dashboard).
+- ✅ Generate the signature **on the server only** using Cloudinary Node.js SDK **v2** (`cloudinary.utils.api_sign_request`). Never put `CLOUDINARY_API_SECRET` in a `VITE_` variable or in client-side code.
+- ✅ Keep `server/.env` in `.gitignore`; never commit API key or secret.
+- ✅ Use **`uploadSignature` as a function** (not `signatureEndpoint`) for reliable signed uploads.
+- ✅ Include **`uploadPreset` in the widget config** so the widget includes it in `params_to_sign`.
+- ✅ **Server must include `upload_preset` in the signed params** (add it if the client did not send it).
+
+### What not to do
+- ❌ **Never** put the API secret in a `VITE_` (or `NEXT_PUBLIC_`) variable or in any file sent to the browser.
+- ❌ **Never** commit the API key or secret; use env vars and ignore `server/.env` in git.
+- ❌ **Do not** generate the signature in client-side JavaScript (it would require the secret in the client).
+- ❌ **Do not** use an unsigned preset when the user explicitly wants secure/signed uploads.
+- ❌ **Do not** omit `uploadPreset` from the widget config when using signed uploads (widget needs it in `params_to_sign`).
+- ❌ **Do not** use Cloudinary Node SDK v1 (e.g. 1.47.0) for signing — use v2 (`import { v2 as cloudinary } from 'cloudinary'`).
+- ❌ **Do not** rely on `signatureEndpoint` alone; use the `uploadSignature` function for reliability.
 
 ## Video Patterns
 
@@ -388,6 +491,15 @@
 
 ## Upload Widget Errors
 
+### Upload fails (unsigned uploads) — first check upload preset
+- ❌ Problem: Upload fails when using unsigned upload
+- ✅ **Debug checklist** (in order):
+  1. **Is the upload preset configured?** Check `.env` has `VITE_CLOUDINARY_UPLOAD_PRESET=your-preset-name` (exact name, no typos)
+  2. **Does the preset exist?** Cloudinary dashboard → Settings → Upload → Upload presets
+  3. **Is it Unsigned?** Preset must be "Unsigned" for client-side uploads (no API key/secret in browser)
+  4. **Env reloaded?** Restart the dev server after any `.env` change
+- ✅ If all above are correct, then check: script loaded in `index.html`, cloud name set, and network/console for the actual error message
+
 ### "Upload preset not found" or "Invalid upload preset"
 - ❌ Problem: Preset doesn't exist or is signed
 - ✅ Solution:
@@ -411,6 +523,22 @@
   1. Ensure script is in `index.html`: `<script src="https://upload-widget.cloudinary.com/global/all.js" async></script>`
   2. Check widget initializes in `useEffect` after `window.cloudinary` is available
   3. Verify upload preset is set correctly
+
+### User needs secure/signed uploads
+- ❌ Problem: User asks for secure uploads; unsigned preset or client-side secret is not acceptable.
+- ✅ Use signed preset + server-side signature. Use **`uploadSignature` as a function** (not `signatureEndpoint`); fetch `api_key` from server first; include `uploadPreset` in widget config; server must include `upload_preset` in signed params. Use Cloudinary Node SDK **v2** on server. Never expose or commit the API secret.
+- ✅ See PATTERNS → "Signed vs unsigned uploads" and "Secure (Signed) Uploads" → "How the client gets credentials (working pattern)".
+
+### "Where do I put my API key and secret?" / "Never commit API key or secret"
+- ❌ Problem: User needs to store `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` securely, or is told to "create a .env file" and worries it will overwrite the existing Vite `.env`.
+- ✅ Do not put them in root `.env`. Create `server/.env` with `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`; add `server/.env` to `.gitignore`; load only in the server. Never commit API key or secret.
+- ✅ See PATTERNS → "Secure (Signed) Uploads" → "Where to put API key and secret (server-only, never committed)".
+
+### "Invalid Signature" or "Missing required parameter - api_key"
+- ❌ Problem: Signed upload fails with "Invalid Signature" or "Missing required parameter - api_key".
+- ✅ **Use the working pattern:** (1) Use **`uploadSignature` as a function** (not `signatureEndpoint`). (2) **Fetch `api_key` from server** before creating the widget (API key is not secret). (3) **Include `uploadPreset` in widget config** so the widget includes it in `params_to_sign`. (4) **Server must include `upload_preset` in the signed params** (add it if the client did not send it). (5) Use **Cloudinary Node.js SDK v2** on the server (`import { v2 as cloudinary } from 'cloudinary'`), not v1 (e.g. 1.47.0).
+- ✅ **Common mistakes:** Using `signatureEndpoint` instead of `uploadSignature` function; omitting `uploadPreset` from widget config; server not adding `upload_preset` to signature params; using SDK v1 for signing; not fetching `api_key` from server before creating the widget. If using `ml_default`, ensure it still exists (user may have deleted it); otherwise create a signed preset in the dashboard.
+- ✅ See PATTERNS → "Secure (Signed) Uploads" → "How the client gets credentials (working pattern)".
 
 ## Video Errors
 
@@ -509,14 +637,17 @@
 ## Quick Reference Checklist
 
 When something isn't working, check:
-- [ ] Environment variables have `VITE_` prefix
+- [ ] Environment variables have `VITE_` prefix (client); **never** put API secret in `VITE_` vars
 - [ ] Dev server was restarted after .env changes
 - [ ] Imports are from correct packages
 - [ ] Transformations are chained on image instance
 - [ ] Format/quality use separate `.delivery()` calls
 - [ ] Plugins are in array format
 - [ ] Upload widget script is loaded in `index.html`
-- [ ] Upload preset is unsigned
+- [ ] **Upload fails (unsigned)?** → Is `VITE_CLOUDINARY_UPLOAD_PRESET` set? Preset exists and is Unsigned in dashboard?
+- [ ] **Secure uploads?** → Use `uploadSignature` as function (not `signatureEndpoint`); fetch `api_key` from server first; include `uploadPreset` in widget config; server includes `upload_preset` in signed params; use Cloudinary Node SDK v2 on server; never expose or commit API secret
+- [ ] **Where do API key/secret go?** → **Do not** put in root `.env`. Use **`server/.env`**; add to `.gitignore`; load only in server. **Never commit** API key or secret
+- [ ] Upload preset is unsigned (for simple client uploads)
 - [ ] Video player is disposed in cleanup
 - [ ] CSS files are imported for video player
 - [ ] TypeScript types are properly imported
