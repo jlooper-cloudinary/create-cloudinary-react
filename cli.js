@@ -139,7 +139,7 @@ async function main() {
         choices: [
           { name: 'Cursor', value: 'cursor' },
           { name: 'GitHub Copilot', value: 'copilot' },
-          { name: 'Claude Code / Claude Desktop', value: 'claude' },
+          { name: 'Claude Code (VS Code extension)', value: 'claude' },
           { name: 'Other / Generic AI tools', value: 'generic' },
         ],
         default: ['cursor'],

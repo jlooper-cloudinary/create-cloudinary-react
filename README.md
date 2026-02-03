@@ -44,7 +44,7 @@ During setup, you'll be asked which AI coding assistant(s) you're using. The CLI
 
 - ✅ **Cursor** → `.cursorrules` + `.cursor/mcp.json` (if selected)
 - ✅ **GitHub Copilot** → `.github/copilot-instructions.md`
-- ✅ **Claude Code / Claude Desktop** → `.claude`, `claude.md` + `.cursor/mcp.json` (if selected)
+- ✅ **Claude Code (VS Code extension)** → `.claude`, `claude.md` + `.cursor/mcp.json` (if selected)
 - ✅ **Generic AI tools** → `AI_INSTRUCTIONS.md`, `PROMPT.md`
 
 **MCP Configuration**: The `.cursor/mcp.json` file is automatically generated if you select Cursor or Claude, as it works with both tools.
