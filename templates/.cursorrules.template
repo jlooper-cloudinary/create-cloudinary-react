@@ -48,10 +48,15 @@ export const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
 - Use **this** pattern for the reusable instance. Everywhere else: `import { cld } from './cloudinary/config'` (or the path the user chose) and call `cld.image(publicId)` / `cld.video(publicId)`.
 
 **3. Upload Widget (unsigned, from scratch)**  
-- **Script**: Add to `index.html`: `<script src="https://upload-widget.cloudinary.com/global/all.js" async></script>`. Because the script loads **async**, React's useEffect can run before it's ready — **do not** call `createUploadWidget` until the script is loaded.
-- **Wait for script**: Before calling `window.cloudinary.createUploadWidget(...)`, ensure `typeof window.cloudinary?.createUploadWidget === 'function'`. If not ready, poll (e.g. setInterval) or wait for the script's `onload` (if you inject the script in code). Otherwise you get "createUploadWidget is not a function".
-- **Create widget in useEffect**, not in render. Store the widget in a **ref**. Pass options: `{ cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME, uploadPreset: uploadPreset || undefined, sources: ['local', 'camera', 'url'], multiple: false }`. Use `uploadPreset` from config or env.
-- **Open on click**: Attach a click listener to a button that calls `widgetRef.current?.open()`. Remove the listener in useEffect cleanup. Handle script load failures (e.g. show error state if script never loads).
+
+**Strict pattern (always follow this exactly):**
+1. **Script in `index.html`** (required): Add `<script src="https://upload-widget.cloudinary.com/global/all.js" async></script>` to `index.html`. Do **not** rely only on dynamic script injection from React — it's fragile.
+2. **Poll in useEffect** (required): In `useEffect`, poll with `setInterval` (e.g. every 100ms) until `typeof window.cloudinary?.createUploadWidget === 'function'`. Only then create the widget. A single check (even in `onload`) is **not** reliable because `window.cloudinary` can exist before `createUploadWidget` is attached.
+3. **Add a timeout**: Set a timeout (e.g. 10 seconds) to stop polling and show an error if the script never loads. Clear both interval and timeout in cleanup.
+4. **Create widget once**: When `createUploadWidget` is available, create the widget and store it in a **ref**. Clear the interval and timeout. Pass options: `{ cloudName, uploadPreset, sources: ['local', 'camera', 'url'], multiple: false }`.
+5. **Open on click**: Attach a click listener to a button that calls `widgetRef.current?.open()`. Remove the listener in useEffect cleanup.
+
+❌ **Do NOT**: Check only `window.cloudinary` (not enough); do a single check in `onload` (unreliable); skip the script in `index.html`; poll forever without a timeout.
 - **Signed uploads**: Do not use only `uploadPreset`; use the pattern under "Secure (Signed) Uploads" (uploadSignature as function, fetch api_key, server includes upload_preset in signature).
 
 **4. Video player**  
@@ -60,7 +65,7 @@ export const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || '';
 **5. Summary for rules-only users**  
 - **Env**: Use your bundler's client env prefix and access (Vite: `VITE_` + `import.meta.env.VITE_*`; see "Other bundlers" if not Vite).
 - **Reusable instance**: One config file that creates and exports `cld` (and optionally `uploadPreset`) from `@cloudinary/url-gen`; use it everywhere.
-- **Upload widget**: Script in index.html (or equivalent); create widget once in useEffect with ref; unsigned = cloudName + uploadPreset; signed = use uploadSignature function and backend.
+- **Upload widget**: Script in index.html (required); in useEffect, **poll** until `createUploadWidget` is a function, then create widget once and store in ref; unsigned = cloudName + uploadPreset; signed = use uploadSignature function and backend.
 - **Video player**: Imperative video element (createElement, append to container ref, pass to videoPlayer); dispose + removeChild in cleanup; fall back to AdvancedVideo if init fails.
 
 **If the user is not using Vite:** Use their bundler's client env prefix and access in the config file and everywhere you read env. Examples: Create React App → `REACT_APP_CLOUDINARY_CLOUD_NAME`, `process.env.REACT_APP_CLOUDINARY_CLOUD_NAME`; Next.js (client) → `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`. The rest (cld instance, widget options, video player) is the same.
@@ -201,16 +206,16 @@ cld.image('id').overlay(
 - ✅ Import plugins from `@cloudinary/react`
 - ✅ Pass plugins as array: `plugins={[responsive(), lazyload(), placeholder()]}`
 - ✅ Recommended plugin order:
-  1. `responsive()` - First
-  2. `lazyload()` - Second
-  3. `accessibility()` - Third
-  4. `placeholder()` - Last
+  1. `responsive()` - First (handles breakpoints)
+  2. `placeholder()` - Second (shows placeholder while loading)
+  3. `lazyload()` - Third (delays loading until in viewport)
+  4. `accessibility()` - Last (if needed)
 - ✅ Always add `width` and `height` attributes to prevent layout shift
 - ✅ Example:
   ```tsx
   <AdvancedImage
     cldImg={img}
-    plugins={[responsive(), lazyload(), placeholder({ mode: 'blur' })]}
+    plugins={[responsive(), placeholder({ mode: 'blur' }), lazyload()]}
     width={800}
     height={600}
   />
@@ -250,11 +255,18 @@ cld.image('id').overlay(
 
 ## Upload Widget Pattern
 - ✅ Use component: `import { UploadWidget } from './cloudinary/UploadWidget'`
-- ✅ Load script in `index.html`:
+
+**Strict initialization pattern (always follow this exactly):**
+1. ✅ **Script in `index.html`** (required):
   ```html
   <script src="https://upload-widget.cloudinary.com/global/all.js" async></script>
   ```
-- ✅ **Race condition**: The script loads **async**, so React's useEffect may run before `createUploadWidget` exists. **Wait until** `typeof window.cloudinary?.createUploadWidget === 'function'` before calling it (e.g. poll with setInterval or wait for script onload). Checking only `window.cloudinary` is not enough — `createUploadWidget` might not be attached yet. Otherwise: "createUploadWidget is not a function".
+2. ✅ **Poll in useEffect until `createUploadWidget` is available** (required): Use `setInterval` (e.g. every 100ms) to check `typeof window.cloudinary?.createUploadWidget === 'function'`. Only create the widget when this returns `true`. Clear the interval once ready.
+3. ✅ **Add a timeout** (e.g. 10 seconds) to stop polling and show an error state if the script never loads. Clear both interval and timeout in cleanup and when ready.
+4. ✅ **Create widget once**, store in a ref. Cleanup: clear interval, clear timeout, remove click listener.
+
+❌ **Do NOT**: Check only `window.cloudinary` (the function may not be attached yet); do a single check in `onload` (unreliable timing); skip `index.html` and rely only on dynamic injection; poll forever without a timeout.
+
 - ✅ Create unsigned upload preset in dashboard at `settings/upload/presets`
 - ✅ Add to `.env`: `VITE_CLOUDINARY_UPLOAD_PRESET=your_preset_name`
 - ✅ Handle callbacks:
@@ -413,6 +425,11 @@ Use when the user asks for a **video player** (styled UI, controls, playlists). 
 - **Cleanup**: Call `player.dispose()`, then **only if** `el.parentNode` exists call `el.parentNode.removeChild(el)` (avoids NotFoundError).
 - **If init fails** (CSP, extensions, timing): render **AdvancedVideo** with the same publicId. Do not relax CSP in index.html or ask the user to disable extensions.
 
+**Poster options**: Always include `posterOptions` for a predictable poster image with a fallback color:
+- `transformation: { startOffset: '0' }` — use the first frame of the video as the poster (consistent and loads reliably)
+- `posterColor: '#0f0f0f'` — if the poster image fails to load, shows a dark background instead of blank/broken
+- These can be overridden via props (e.g. `posterOptions={{ transformation: { startOffset: '5' } }}` for a different frame)
+
 **Example (copy this pattern):**
 ```tsx
 const containerRef = useRef<HTMLDivElement>(null);
@@ -423,7 +440,16 @@ useLayoutEffect(() => {
   el.className = 'cld-video-player cld-fluid';
   containerRef.current.appendChild(el);
   try {
-    const player = videoPlayer(el, { cloudName, secure: true, controls: true, fluid: true });
+    const player = videoPlayer(el, {
+      cloudName,
+      secure: true,
+      controls: true,
+      fluid: true,
+      posterOptions: {
+        transformation: { startOffset: '0' },
+        posterColor: '#0f0f0f',
+      },
+    });
     player.source({ publicId: 'samples/elephants' });
     playerRef.current = player;
   } catch (err) { console.error(err); }
@@ -494,18 +520,28 @@ Docs: https://cloudinary.com/documentation/cloudinary_video_player.md
 - ✅ Access with type safety: `import.meta.env.VITE_CLOUDINARY_CLOUD_NAME`
 
 ### Type Guards and Safety
-- ✅ Type guard for window.cloudinary:
+- ✅ Type guard for window.cloudinary (check `createUploadWidget`, not just `cloudinary`):
   ```tsx
-  function isCloudinaryLoaded(): boolean {
+  function isUploadWidgetReady(): boolean {
     return typeof window !== 'undefined' && 
-           typeof window.cloudinary !== 'undefined';
+           typeof window.cloudinary?.createUploadWidget === 'function';
   }
   ```
-- ✅ Use type guards before accessing:
+- ✅ Use type guards before accessing (but **always poll with timeout** in useEffect — don't rely on a single check):
   ```tsx
-  if (isCloudinaryLoaded()) {
-    window.cloudinary.createUploadWidget(...);
-  }
+  // In useEffect, poll until ready with timeout:
+  const interval = setInterval(() => {
+    if (isUploadWidgetReady()) {
+      clearInterval(interval);
+      clearTimeout(timeout);
+      window.cloudinary.createUploadWidget(...);
+    }
+  }, 100);
+  const timeout = setTimeout(() => {
+    clearInterval(interval);
+    console.error('Upload widget script failed to load');
+  }, 10000);
+  // Cleanup: clearInterval(interval); clearTimeout(timeout);
   ```
 
 ### Ref Typing Patterns
@@ -553,7 +589,7 @@ Docs: https://cloudinary.com/documentation/cloudinary_video_player.md
 - ✅ Use `placeholder()` and `lazyload()` plugins together
 - ✅ Always add `width` and `height` attributes to `AdvancedImage`
 - ✅ Store `public_id` from upload success, not full URL
-- ✅ Video player: use imperative element only; dispose in useLayoutEffect cleanup and remove element with `if (el.parentNode) el.parentNode.removeChild(el)`
+- ✅ Video player: use imperative element only; dispose in useLayoutEffect cleanup and remove element with `if (el.parentNode) el.parentNode.removeChild(el)`; always include `posterOptions` with `transformation: { startOffset: '0' }` and `posterColor: '#0f0f0f'` for reliable poster display
 - ✅ Use TypeScript for better autocomplete and error catching
 - ✅ Prefer `unknown` over `any` when types aren't available
 - ✅ Use type guards for runtime type checking
@@ -656,16 +692,17 @@ Docs: https://cloudinary.com/documentation/cloudinary_video_player.md
   4. Consider using server-side upload for very large files
 
 ### Widget not opening
-- ❌ Problem: Script not loaded or initialization issue
+- ❌ Problem: Script not loaded, or widget created before `createUploadWidget` was available
 - ✅ Solution:
   1. Ensure script is in `index.html`: `<script src="https://upload-widget.cloudinary.com/global/all.js" async></script>`
-  2. Check widget initializes in `useEffect` after `window.cloudinary` is available
+  2. In `useEffect`, **poll** with `setInterval` until `typeof window.cloudinary?.createUploadWidget === 'function'` — only then create the widget. Do **not** check only `window.cloudinary`.
   3. Verify upload preset is set correctly
 
 ### "createUploadWidget is not a function"
-- ❌ Problem: **Race condition** — the script in index.html loads **async**, so React's useEffect can run before the script has finished loading. `window.cloudinary` might exist but `createUploadWidget` isn't attached yet.
-- ✅ **Wait for script**: Before calling `window.cloudinary.createUploadWidget(...)`, ensure `typeof window.cloudinary?.createUploadWidget === 'function'`. If not ready, poll (e.g. setInterval until it exists) or inject the script in code and call createUploadWidget in the script's `onload`. Don't assume `window.cloudinary` means the API is ready.
-- ✅ See PATTERNS → Upload Widget Pattern ("Race condition") and Project setup → Upload Widget ("Wait for script").
+- ❌ Problem: **Race condition** — the script loads **async**, so `window.cloudinary` can exist before `createUploadWidget` is attached. A single check (even in `onload`) is **not** reliable.
+- ✅ **Always poll**: In `useEffect`, use `setInterval` to check `typeof window.cloudinary?.createUploadWidget === 'function'`. Only create the widget when this returns `true`. Clear the interval once ready.
+- ❌ **Do NOT**: Check only `window.cloudinary`; do a single check in `onload`; skip the script in `index.html`.
+- ✅ See PATTERNS → Upload Widget Pattern and Project setup → Upload Widget for the strict pattern.
 
 ### Video player: "Invalid target for null#on" or React removeChild or NotFoundError
 - ❌ Problem: Passing a React-managed `<video ref={...} />` to the player causes removeChild errors (the player mutates the DOM). Or container/ref not in DOM yet when init runs.
@@ -718,7 +755,7 @@ Docs: https://cloudinary.com/documentation/cloudinary_video_player.md
 
 ### Cloudinary package install fails or "version doesn't exist"
 - ❌ Problem: Agent pinned a Cloudinary package to a specific version (e.g. `cloudinary-video-player@1.2.3`) that doesn't exist on npm, or used a wrong package name.
-- ✅ **Install latest**: Use `npm install <package>` with **no version** so npm gets the latest compatible. In package.json use a **caret** (e.g. `"cloudinary-video-player": "^1.0.0"`). Use only correct package names: `@cloudinary/react`, `@cloudinary/tps://console.cloudinary.com/app/settings/upload/presets\n\n'-gen`, `cloudinary-video-player`, `cloudinary`. See PATTERNS → "Installing Cloudinary packages".
+- ✅ **Install latest**: Use `npm install <package>` with **no version** so npm gets the latest compatible. In package.json use a **caret** (e.g. `"cloudinary-video-player": "^1.0.0"`). Use only correct package names: `@cloudinary/react`, `@cloudinary/url-gen`, `cloudinary-video-player`, `cloudinary`. See PATTERNS → "Installing Cloudinary packages".
 
 ### Confusion between AdvancedVideo and Video Player
 - **AdvancedVideo** = for **displaying** a video (not a full player). **Cloudinary Video Player** = the **player** (styled UI, controls, playlists, etc.).
@@ -741,6 +778,11 @@ Docs: https://cloudinary.com/documentation/cloudinary_video_player.md
 
 ### Video player: "source is not a function" or video not playing
 - **player.source()** takes an **object**: `player.source({ publicId: 'samples/elephants' })`, not a string. Use named import: `import { videoPlayer } from 'cloudinary-video-player'`. See PATTERNS → Cloudinary Video Player (The Player).
+
+### Video player: poster image missing, wrong frame, or broken
+- ❌ Problem: Video player shows no poster, wrong poster frame, or blank area before video loads.
+- ✅ **Always include `posterOptions`** in the player config: `posterOptions: { transformation: { startOffset: '0' }, posterColor: '#0f0f0f' }`. This uses the first frame as the poster (reliable) and provides a dark fallback color if the poster fails to load.
+- ✅ **Override if needed**: Pass different values via props, e.g. `startOffset: '5'` for a frame 5 seconds in, or a different `posterColor` for your design.
 
 ### Overlay: "Cannot read properties of undefined" or overlay not showing
 - ❌ Problem: Wrong overlay API usage (Overlay.source, compass constants, .transformation().resize, fontWeight on wrong object).
@@ -815,8 +857,8 @@ When something isn't working, check:
 - [ ] Format/quality use separate `.delivery()` calls
 - [ ] Plugins are in array format
 - [ ] Upload widget script is loaded in `index.html`
-- [ ] **"createUploadWidget is not a function"?** → Wait until `typeof window.cloudinary?.createUploadWidget === 'function'` before calling it (script loads async; poll or use script onload)
-- [ ] **Video player?** → **Imperative element only**: createElement('video'), append to container ref, pass to videoPlayer(el, ...); player.source({ publicId }); cleanup: dispose then if (el.parentNode) el.parentNode.removeChild(el). CSS: cloudinary-video-player/cld-video-player.min.css. If init fails, fall back to AdvancedVideo (do not relax CSP).
+- [ ] **"createUploadWidget is not a function"?** → In useEffect, **poll** with setInterval until `typeof window.cloudinary?.createUploadWidget === 'function'`. Do NOT check only `window.cloudinary`; do NOT rely on a single onload check
+- [ ] **Video player?** → **Imperative element only**: createElement('video'), append to container ref, pass to videoPlayer(el, ...); include `posterOptions: { transformation: { startOffset: '0' }, posterColor: '#0f0f0f' }` for reliable poster; player.source({ publicId }); cleanup: dispose then if (el.parentNode) el.parentNode.removeChild(el). CSS: cloudinary-video-player/cld-video-player.min.css. If init fails, fall back to AdvancedVideo (do not relax CSP).
 - [ ] **Upload fails (unsigned)?** → Is `VITE_CLOUDINARY_UPLOAD_PRESET` set? Preset exists and is Unsigned in dashboard?
 - [ ] **Upload default?** → Default to **unsigned** uploads (cloudName + uploadPreset); use signed only when the user explicitly asks for secure/signed uploads (signed requires a running backend)
 - [ ] **Secure uploads?** → Use `uploadSignature` as function (not `signatureEndpoint`); fetch `api_key` from server first; include `uploadPreset` in widget config; server includes `upload_preset` in signed params; use Cloudinary Node SDK v2 on server; never expose or commit API secret

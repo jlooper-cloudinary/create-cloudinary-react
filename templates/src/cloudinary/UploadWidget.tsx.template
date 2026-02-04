@@ -1,16 +1,42 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { uploadPreset } from './config';
 
+export interface CloudinaryUploadResult {
+  public_id: string;
+  secure_url: string;
+  url: string;
+  width: number;
+  height: number;
+  format: string;
+  resource_type: string;
+  bytes: number;
+  created_at: string;
+}
+
 interface UploadWidgetProps {
-  onUploadSuccess?: (result: any) => void;
+  onUploadSuccess?: (result: CloudinaryUploadResult) => void;
   onUploadError?: (error: Error) => void;
   buttonText?: string;
   className?: string;
 }
 
+interface CloudinaryWidgetResult {
+  event: string;
+  info: CloudinaryUploadResult;
+}
+
+interface CloudinaryWidgetError {
+  message?: string;
+}
+
 declare global {
   interface Window {
-    cloudinary: any;
+    cloudinary?: {
+      createUploadWidget: (
+        config: Record<string, unknown>,
+        callback: (error: CloudinaryWidgetError | null, result: CloudinaryWidgetResult | null) => void
+      ) => { open: () => void };
+    };
   }
 }
 
@@ -20,13 +46,17 @@ export function UploadWidget({
   buttonText = 'Upload Image',
   className = '',
 }: UploadWidgetProps) {
-  const widgetRef = useRef<any>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const clickHandlerRef = useRef<(() => void) | null>(null);
+  const widgetRef = useRef<{ open: () => void } | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [scriptError, setScriptError] = useState(false);
 
   useEffect(() => {
+    let poll: ReturnType<typeof setInterval> | null = null;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    let mounted = true;
+
     function initializeWidget() {
-      if (typeof window.cloudinary?.createUploadWidget !== 'function' || !buttonRef.current) return;
+      if (!mounted || typeof window.cloudinary?.createUploadWidget !== 'function') return;
 
       if (!uploadPreset) {
         console.warn(
@@ -42,7 +72,7 @@ export function UploadWidget({
           sources: ['local', 'camera', 'url'],
           multiple: false,
         },
-        (error: any, result: any) => {
+        (error: CloudinaryWidgetError | null, result: CloudinaryWidgetResult | null) => {
           if (error) {
             console.error('Upload error:', error);
             onUploadError?.(new Error(error.message || 'Upload failed'));
@@ -56,73 +86,88 @@ export function UploadWidget({
         }
       );
 
-      const handler = () => widgetRef.current?.open();
-      clickHandlerRef.current = handler;
-      buttonRef.current.addEventListener('click', handler);
+      setIsReady(true);
     }
 
-    function waitThenInit() {
-      if (typeof window.cloudinary?.createUploadWidget === 'function') {
+    function isWidgetReady(): boolean {
+      return typeof window.cloudinary?.createUploadWidget === 'function';
+    }
+
+    // Poll until createUploadWidget is available
+    // Script should be in index.html, but poll handles any load timing
+    poll = setInterval(() => {
+      if (isWidgetReady()) {
+        if (poll) clearInterval(poll);
+        if (timeout) clearTimeout(timeout);
         initializeWidget();
-        return true;
       }
-      return false;
-    }
+    }, 100);
 
-    if (!window.cloudinary) {
-      const script = document.createElement('script');
-      script.src = 'https://upload-widget.cloudinary.com/global/all.js';
-      script.async = true;
-      document.body.appendChild(script);
-      script.onload = () => waitThenInit();
-    } else if (!waitThenInit()) {
-      const poll = setInterval(() => {
-        if (waitThenInit()) {
-          clearInterval(poll);
-          clearTimeout(timeout);
-        }
-      }, 100);
-      const timeout = setTimeout(() => clearInterval(poll), 10000);
-      return () => {
-        clearInterval(poll);
-        clearTimeout(timeout);
-        if (buttonRef.current && clickHandlerRef.current) {
-          buttonRef.current.removeEventListener('click', clickHandlerRef.current);
-        }
-      };
+    // Timeout after 10 seconds
+    timeout = setTimeout(() => {
+      if (poll) clearInterval(poll);
+      if (mounted && !isWidgetReady()) {
+        console.error('Upload widget script failed to load within 10 seconds');
+        setScriptError(true);
+      }
+    }, 10000);
+
+    // Check immediately in case script is already loaded
+    if (isWidgetReady()) {
+      if (poll) clearInterval(poll);
+      if (timeout) clearTimeout(timeout);
+      initializeWidget();
     }
 
     return () => {
-      if (buttonRef.current && clickHandlerRef.current) {
-        buttonRef.current.removeEventListener('click', clickHandlerRef.current);
-      }
+      mounted = false;
+      if (poll) clearInterval(poll);
+      if (timeout) clearTimeout(timeout);
     };
   }, [onUploadSuccess, onUploadError]);
 
+  const handleClick = () => {
+    if (widgetRef.current) {
+      widgetRef.current.open();
+    } else if (!scriptError) {
+      console.warn('Upload widget is still loading, please try again.');
+    }
+  };
+
+  if (scriptError) {
+    return (
+      <div style={{ color: '#dc2626', fontSize: '0.875rem' }}>
+        Upload widget failed to load. Please refresh the page or check your network connection.
+      </div>
+    );
+  }
+
   return (
     <button
-      ref={buttonRef}
       type="button"
+      onClick={handleClick}
+      disabled={!isReady}
       className={className}
       style={{
         padding: '0.75rem 1.5rem',
         fontSize: '1rem',
         fontWeight: 500,
         color: 'white',
-        backgroundColor: '#6366f1',
+        backgroundColor: isReady ? '#6366f1' : '#9ca3af',
         border: 'none',
         borderRadius: '0.5rem',
-        cursor: 'pointer',
+        cursor: isReady ? 'pointer' : 'wait',
         transition: 'background-color 0.2s',
+        opacity: isReady ? 1 : 0.7,
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = '#4f46e5';
+        if (isReady) e.currentTarget.style.backgroundColor = '#4f46e5';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = '#6366f1';
+        if (isReady) e.currentTarget.style.backgroundColor = '#6366f1';
       }}
     >
-      {buttonText}
+      {isReady ? buttonText : 'Loading...'}
     </button>
   );
 }

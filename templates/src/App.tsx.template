@@ -7,12 +7,13 @@ import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality';
 import { autoGravity } from '@cloudinary/url-gen/qualifiers/gravity';
 import { cld } from './cloudinary/config';
 import { UploadWidget } from './cloudinary/UploadWidget';
+import type { CloudinaryUploadResult } from './cloudinary/UploadWidget';
 import './App.css';
 
 function App() {
   const [uploadedImageId, setUploadedImageId] = useState<string | null>(null);
 
-  const handleUploadSuccess = (result: any) => {
+  const handleUploadSuccess = (result: CloudinaryUploadResult) => {
     console.log('Upload successful:', result);
     setUploadedImageId(result.public_id);
   };
