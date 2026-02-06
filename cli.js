@@ -247,8 +247,7 @@ async function main() {
     }
 
     if (aiTools.includes('claude')) {
-      writeFileSync(join(projectPath, '.claude'), aiRulesContent);
-      writeFileSync(join(projectPath, 'claude.md'), aiRulesContent);
+      writeFileSync(join(projectPath, 'CLAUDE.md'), aiRulesContent);
     }
 
     if (aiTools.includes('generic')) {
