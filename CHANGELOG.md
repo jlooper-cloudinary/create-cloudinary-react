@@ -1,3 +1,15 @@
+# [1.0.0-beta.15](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2026-02-10)
+
+
+### Bug Fixes
+
+* use correct CLAUDE.md convention for Claude Code ([07a8a08](https://github.com/cloudinary-devs/create-cloudinary-react/commit/07a8a085686b160387388464a722d90c09cb6805))
+
+
+### Features
+
+* **analytics:** add CLI feature detection for React SDK ([4dfe495](https://github.com/cloudinary-devs/create-cloudinary-react/commit/4dfe4957bf615e9df08afe729e4f024c02d1cc7f))
+
 # [1.0.0-beta.14](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2026-02-04)
 
 
