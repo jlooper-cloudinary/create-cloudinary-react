@@ -30,7 +30,7 @@ If the user is **not** using the create-cloudinary-react CLI and only has these 
 Create a `.env` file in the project root with **Vite prefix** (required for client access):
 - `VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name` (required)
 - `VITE_CLOUDINARY_UPLOAD_PRESET=your_unsigned_preset_name` (optional; required for unsigned upload widget)
-- Restart the dev server after adding or changing `.env`. Use `import.meta.env.VITE_*` in code, not `process.env`.
+- Save the `.env` file after editing it, then restart the dev server so changes load correctly. Use `import.meta.env.VITE_*` in code, not `process.env`.
 
 **2. Reusable Cloudinary instance (config)**  
 Create a config file (e.g. `src/cloudinary/config.ts`) so the rest of the app can use a single `cld` instance:

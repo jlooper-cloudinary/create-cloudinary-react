@@ -18,11 +18,7 @@ This project uses Cloudinary for image management. If you don't have a Cloudinar
 
 Your `.env` file has been pre-configured with:
 - `VITE_CLOUDINARY_CLOUD_NAME`: {{CLOUD_NAME}}
-{{#UPLOAD_PRESET}}
-- `VITE_CLOUDINARY_UPLOAD_PRESET`: {{UPLOAD_PRESET}}
-{{/UPLOAD_PRESET}}
-{{^UPLOAD_PRESET}}
-- `VITE_CLOUDINARY_UPLOAD_PRESET`: (not set - required for uploads)
+{{UPLOAD_PRESET_ENV_LINE}}
 
 **Note**: Transformations work without an upload preset (using sample images). Uploads require an unsigned upload preset.
 
@@ -31,7 +27,8 @@ To create an unsigned upload preset:
 2. Click "Add upload preset"
 3. Set it to "Unsigned" mode
 4. Add the preset name to your `.env` file
-{{/UPLOAD_PRESET}}
+5. **Save** the `.env` file and restart the dev server so the new values load correctly.
+
 
 ## AI Assistant Support
 

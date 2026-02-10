@@ -72,7 +72,7 @@ async function main() {
     console.log(chalk.cyan.bold('\n🚀 Cloudinary React + Vite\n'));
     console.log(chalk.gray('💡 Need a Cloudinary account? Sign up for free: https://cloudinary.com/users/register/free\n'));
   
-    answers = await inquirer.prompt([
+    const questions = [
       {
         type: 'input',
         name: 'projectName',
@@ -135,7 +135,9 @@ async function main() {
       {
         type: 'checkbox',
         name: 'aiTools',
-        message: 'Which AI coding assistant(s) are you using? (Select all that apply)',
+        message:
+          'Which AI coding assistant(s) are you using? (Select all that apply)\n' +
+          chalk.gray('   We’ll add local instruction files so your assistant knows Cloudinary patterns.\n'),
         choices: [
           { name: 'Cursor', value: 'cursor' },
           { name: 'GitHub Copilot', value: 'copilot' },
@@ -157,7 +159,9 @@ async function main() {
         default: false,
         when: (answers) => answers.installDeps,
       },
-    ]);
+    ];
+
+    answers = await inquirer.prompt(questions);
   }
 
   const { projectName, cloudName, uploadPreset, aiTools, installDeps, startDev } = answers;
@@ -183,6 +187,9 @@ async function main() {
     PROJECT_NAME: projectName,
     CLOUD_NAME: cloudName,
     UPLOAD_PRESET: uploadPreset || '',
+    UPLOAD_PRESET_ENV_LINE: uploadPreset
+      ? `- \`VITE_CLOUDINARY_UPLOAD_PRESET\`: ${uploadPreset}`
+      : '- `VITE_CLOUDINARY_UPLOAD_PRESET`: (not set - add one for uploads)',
   };
 
   // Function to copy template file
@@ -278,6 +285,18 @@ async function main() {
 
   console.log(chalk.green('✅ Project created successfully!\n'));
 
+  if (aiTools && aiTools.length > 0) {
+    console.log(chalk.cyan('📋 AI assistant files created:'));
+    if (aiTools.includes('cursor')) console.log(chalk.gray('   • Cursor: .cursorrules'));
+    if (aiTools.includes('copilot')) console.log(chalk.gray('   • GitHub Copilot: .github/copilot-instructions.md'));
+    if (aiTools.includes('claude')) console.log(chalk.gray('   • Claude: CLAUDE.md'));
+    if (aiTools.includes('generic')) console.log(chalk.gray('   • Generic: AI_INSTRUCTIONS.md, PROMPT.md'));
+    if (aiTools.includes('cursor') || aiTools.includes('claude')) {
+      console.log(chalk.gray('   • MCP (Cursor/Claude): .cursor/mcp.json'));
+    }
+    console.log('');
+  }
+
   if (!answers.hasUploadPreset) {
     console.log(chalk.yellow('\n📝 Note: Upload preset not configured'));
     console.log(chalk.gray('   • Transformations will work with sample images'));
@@ -286,7 +305,8 @@ async function main() {
     console.log(chalk.cyan('   1. Go to https://console.cloudinary.com/app/settings/upload/presets'));
     console.log(chalk.cyan('   2. Click "Add upload preset"'));
     console.log(chalk.cyan('   3. Set it to "Unsigned" mode'));
-    console.log(chalk.cyan('   4. Add the preset name to your .env file\n'));
+    console.log(chalk.cyan('   4. Add the preset name to your .env file'));
+    console.log(chalk.cyan('   5. Save the file and restart the dev server so it loads correctly\n'));
   }
 
   if (installDeps) {

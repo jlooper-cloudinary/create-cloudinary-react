@@ -5,10 +5,12 @@ import { format, quality } from '@cloudinary/url-gen/actions/delivery';
 import { auto } from '@cloudinary/url-gen/qualifiers/format';
 import { auto as autoQuality } from '@cloudinary/url-gen/qualifiers/quality';
 import { autoGravity } from '@cloudinary/url-gen/qualifiers/gravity';
-import { cld } from './cloudinary/config';
+import { cld, uploadPreset } from './cloudinary/config';
 import { UploadWidget } from './cloudinary/UploadWidget';
 import type { CloudinaryUploadResult } from './cloudinary/UploadWidget';
 import './App.css';
+
+const hasUploadPreset = Boolean(uploadPreset);
 
 function App() {
   const [uploadedImageId, setUploadedImageId] = useState<string | null>(null);
@@ -24,7 +26,7 @@ function App() {
   };
 
   // Display uploaded image if available, otherwise show a sample
-  const imageId = uploadedImageId || 'samples/cloudinary-icon';
+  const imageId = uploadedImageId || 'samples/people/bicycle';
   
   const displayImage = cld
     .image(imageId)
@@ -38,14 +40,16 @@ function App() {
         <h1>Cloudinary React + Vite</h1>
         <p>This is a ready-to-use development environment with Cloudinary integration.</p>
         
-        <div className="upload-section">
-          <h2>Upload an Image</h2>
-          <UploadWidget
-            onUploadSuccess={handleUploadSuccess}
-            onUploadError={handleUploadError}
-            buttonText="Upload Image"
-          />
-        </div>
+        {hasUploadPreset && (
+          <div className="upload-section">
+            <h2>Upload an Image</h2>
+            <UploadWidget
+              onUploadSuccess={handleUploadSuccess}
+              onUploadError={handleUploadError}
+              buttonText="Upload Image"
+            />
+          </div>
+        )}
 
         <div className="image-section">
           <h2>Display Image</h2>
@@ -66,9 +70,21 @@ function App() {
             <strong>Copy and paste</strong> one of these prompts into your AI assistant:
           </p>
           <ul className="prompts-list">
-            <li>Create an image gallery with lazy loading and responsive</li>
-            <li>Create a video player that plays a Cloudinary video</li>
-            <li>Add image overlays with text or logos</li>
+            {hasUploadPreset ? (
+              <>
+                <li>Upload an image to my account</li>
+                <li>Create an image gallery with lazy loading and responsive images</li>
+                <li>Create a video player that plays a Cloudinary video</li>
+                <li>Add image overlays with text or logos</li>
+              </>
+            ) : (
+              <>
+                <li>Let&apos;s try uploading — help me add an upload preset and upload widget</li>
+                <li>Create an image gallery with lazy loading and responsive</li>
+                <li>Create a video player that plays a Cloudinary video</li>
+                <li>Add image overlays with text or logos</li>
+              </>
+            )}
           </ul>
         </div>
       </main>
