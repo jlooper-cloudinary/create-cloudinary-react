@@ -1,3 +1,15 @@
+# [1.0.0-beta.17](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.16...v1.0.0-beta.17) (2026-02-12)
+
+
+### Bug Fixes
+
+* simplified questions into arrays ([bade600](https://github.com/cloudinary-devs/create-cloudinary-react/commit/bade600ee63de7a7c3d8eec40569f8896f96a7bd))
+
+
+### Features
+
+* prompt copied animation ([9ad35b2](https://github.com/cloudinary-devs/create-cloudinary-react/commit/9ad35b2351a69bca6d4dcd716b10a1508d5228a8))
+
 # [1.0.0-beta.16](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2026-02-11)
 
 
