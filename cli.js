@@ -141,7 +141,7 @@ async function main() {
         choices: [
           { name: 'Cursor', value: 'cursor' },
           { name: 'GitHub Copilot', value: 'copilot' },
-          { name: 'Claude Code (VS Code extension)', value: 'claude' },
+          { name: 'Claude Code', value: 'claude' },
           { name: 'Other / Generic AI tools', value: 'generic' },
         ],
         default: ['cursor'],
@@ -262,17 +262,20 @@ async function main() {
       writeFileSync(join(projectPath, 'PROMPT.md'), aiRulesContent);
     }
 
-    // Generate MCP configuration if using Cursor or Claude (MCP works with both)
-    if (aiTools.includes('cursor') || aiTools.includes('claude')) {
-      const mcpTemplatePath = join(TEMPLATES_DIR, '.cursor/mcp.json.template');
-      if (existsSync(mcpTemplatePath)) {
+    // Generate MCP configuration: Cursor uses .cursor/mcp.json, Claude Code uses .mcp.json in project root
+    const mcpTemplatePath = join(TEMPLATES_DIR, '.cursor/mcp.json.template');
+    if (existsSync(mcpTemplatePath)) {
+      const mcpContent = replaceTemplate(
+        readFileSync(mcpTemplatePath, 'utf-8'),
+        templateVars
+      );
+      if (aiTools.includes('cursor')) {
         const cursorDir = join(projectPath, '.cursor');
         mkdirSync(cursorDir, { recursive: true });
-        const mcpContent = replaceTemplate(
-          readFileSync(mcpTemplatePath, 'utf-8'),
-          templateVars
-        );
         writeFileSync(join(cursorDir, 'mcp.json'), mcpContent);
+      }
+      if (aiTools.includes('claude')) {
+        writeFileSync(join(projectPath, '.mcp.json'), mcpContent);
       }
     }
   }
@@ -291,9 +294,8 @@ async function main() {
     if (aiTools.includes('copilot')) console.log(chalk.gray('   • GitHub Copilot: .github/copilot-instructions.md'));
     if (aiTools.includes('claude')) console.log(chalk.gray('   • Claude: CLAUDE.md'));
     if (aiTools.includes('generic')) console.log(chalk.gray('   • Generic: AI_INSTRUCTIONS.md, PROMPT.md'));
-    if (aiTools.includes('cursor') || aiTools.includes('claude')) {
-      console.log(chalk.gray('   • MCP (Cursor/Claude): .cursor/mcp.json'));
-    }
+    if (aiTools.includes('cursor')) console.log(chalk.gray('   • MCP (Cursor): .cursor/mcp.json'));
+    if (aiTools.includes('claude')) console.log(chalk.gray('   • MCP (Claude Code): .mcp.json'));
     console.log('');
   }
 
