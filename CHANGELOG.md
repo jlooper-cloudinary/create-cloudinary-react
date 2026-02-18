@@ -1,3 +1,11 @@
+# [1.0.0-beta.18](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.17...v1.0.0-beta.18) (2026-02-18)
+
+
+### Bug Fixes
+
+* update registration link ([2a69d7a](https://github.com/cloudinary-devs/create-cloudinary-react/commit/2a69d7ada9de1cb2751bbd4c1d344422b4c2dd5e))
+* update video player example ([9db39ee](https://github.com/cloudinary-devs/create-cloudinary-react/commit/9db39ee8fc149c748ea422544a79b45a60365f47))
+
 # [1.0.0-beta.17](https://github.com/cloudinary-devs/create-cloudinary-react/compare/v1.0.0-beta.16...v1.0.0-beta.17) (2026-02-12)
 
 
